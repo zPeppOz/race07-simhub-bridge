@@ -89,6 +89,29 @@ void* PatchImport(const char* dll, const char* func, void* replacement) {
 
 }  // namespace
 
+// Race_Steam.exe 1.2.1.10 (and the Remaster's RaceR_Steam.exe): before creating
+// the window the game compares the chosen video mode with the desktop mode and,
+// if they differ (e.g. 2560x1440@60 picked on a 165 Hz desktop), silently clears
+// the windowed flag: `mov byte ptr [0xa05e60], 0` at 0x5b2b8f. A windowed
+// swap chain does not care about the mode's refresh rate, so drop that fallback.
+static void KeepWindowedOnModeMismatch() {
+  static const BYTE kForceFullscreen[] = {0xc6, 0x05, 0x60, 0x5e, 0xa0, 0x00, 0x00};
+  BYTE* site = reinterpret_cast<BYTE*>(0x5b2b8f);
+  MEMORY_BASIC_INFORMATION mbi;
+  const bool mapped = VirtualQuery(site, &mbi, sizeof(mbi)) == sizeof(mbi) && mbi.State == MEM_COMMIT &&
+                      (mbi.Protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_READONLY | PAGE_READWRITE));
+  if (!mapped || memcmp(site, kForceFullscreen, sizeof(kForceFullscreen)) != 0) {
+    Log("borderless: fullscreen fallback not found (unknown build), left as is");
+    return;
+  }
+  DWORD old;
+  VirtualProtect(site, sizeof(kForceFullscreen), PAGE_EXECUTE_READWRITE, &old);
+  memset(site, 0x90, sizeof(kForceFullscreen));
+  VirtualProtect(site, sizeof(kForceFullscreen), old, &old);
+  FlushInstructionCache(GetCurrentProcess(), site, sizeof(kForceFullscreen));
+  Log("borderless: disabled the fullscreen fallback on video mode mismatch");
+}
+
 void InstallWindowHooks(const WindowConfig& cfg) {
   if (cfg.dpiAware) {
     // Without this, a 2560x1440 render window on a 125% scaled desktop is
@@ -103,5 +126,6 @@ void InstallWindowHooks(const WindowConfig& cfg) {
     g_realCreateWindowExA = reinterpret_cast<CreateWindowExA_t>(
         PatchImport("user32.dll", "CreateWindowExA", reinterpret_cast<void*>(&HookCreateWindowExA)));
     Log("borderless: CreateWindowExA hook %s", g_realCreateWindowExA ? "installed" : "NOT installed");
+    KeepWindowedOnModeMismatch();
   }
 }
