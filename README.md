@@ -5,7 +5,7 @@ A Race 07 plugin (`race07bridge.sbp`) that:
 1. **Gives SimHub full data.** SimHub's own Race 07 reader only uses the game's `$Race$` buffer: player RPM, speed, gear, fuel, a few temperatures, your lap times. No opponents, pedals, pressures, wear, sectors or pit state, so leaderboard, relative, radar, map and pedal overlays stay empty. The plugin reads the game state every frame and publishes it as `$rFactorShared$`, the rFactor 1 shared-memory layout that SimHub's **GTR2** reader consumes.
 2. **Borderless windowed mode.** It hooks the game's `CreateWindowExA` and creates the main window without a frame, sized to the render resolution and placed on the primary monitor. It also makes the process DPI aware, so a 2560×1440 window is not stretched on a scaled desktop.
 
-Supported executable: `RaceR_Steam.exe`, the Race Remaster build. The plugin checks for it by code signature and disables data output on any other build.
+Supported executable: the Steam build of Race 07, 1.2.1.10 (`Race_Steam.exe`). This covers the GTR Evolution, STCC and other expansions installed on top of it. The community Race Remaster mod's `RaceR_Steam.exe` also works: it is the same build with a few byte patches, and every address the plugin uses is identical in both. The plugin checks the build by a code signature and turns off data output on any other build; borderless mode still works there.
 
 ## Install
 
@@ -29,7 +29,7 @@ Not available in Race 07, so left at zero: flags (yellow per sector, blue), star
 
 ## How the plugin hooks in
 
-Race 07 has an undocumented plugin interface. Found by disassembling `RaceR_Steam.exe`:
+Race 07 has an undocumented plugin interface. Found by disassembling `Race_Steam.exe`:
 
 - At startup the game `LoadLibrary`s each `plugins\*.sbp` and calls the export `GetSBDTDLL()`, which returns an object pointer.
 - Every frame it ORs the `GetFlags()` of all plugins (vtable slot 6) and calls the virtual callbacks whose bits are set (`__thiscall`, callee pops the arguments):

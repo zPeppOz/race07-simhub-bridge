@@ -1,6 +1,6 @@
 // Race 07 game state -> rFactor 1 shared memory layout.
 //
-// Offsets were found by disassembling RaceR_Steam.exe (the $Race$ buffer
+// Offsets were found by disassembling Race_Steam.exe 1.2.1.10 (the $Race$ buffer
 // writer, the results-file writer, the plugin callbacks) and confirmed
 // against memory snapshots of a live race (Debug.DumpInterval, see README).
 #include "race07.h"
@@ -14,7 +14,8 @@
 namespace race07 {
 namespace {
 
-// Globals (RaceR_Steam.exe, Race Remaster build).
+// Globals (Race_Steam.exe 1.2.1.10; the Race Remaster mod's RaceR_Steam.exe is
+// the same build with a few byte patches, so the addresses are shared).
 namespace g {
 constexpr uintptr_t kPlayerVehicle = 0xa08494;  // Vehicle* of the local player
 constexpr uintptr_t kVehicleTable = 0xa084a0;   // Vehicle*[numVehicles]
@@ -222,9 +223,9 @@ void FillWheel(uintptr_t vehicle, int i, rf1::Wheel& out) {
 }  // namespace
 
 bool Init() {
-  // FUN_0053e1f0 writes the game's own $Race$ buffer from the player vehicle.
+  // The function that writes the game's own $Race$ buffer from the player vehicle.
   if (CodeMatches(0x53e1f0, "51a19484a00053558ba8f4700000568bf1")) {
-    Log("game build: RaceR_Steam.exe (Race Remaster)");
+    Log("game build: Race 07 Steam 1.2.1.10");
     return true;
   }
   return false;
